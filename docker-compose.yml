@@ -1,0 +1,33 @@
+version: "3.9"
+services:
+  mySql-db:
+    image: mysql:latest
+    environment:
+      MYSQL_ROOT_PASSWORD: root123
+      MYSQL_DATABASE: vendor_db
+      MYSQL_USER: vendor_user
+      MYSQL_PASSWORD: vendor123
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    restart: always
+
+  cassandra-db:
+    image: cassandra:latest
+    container_name: vendor-cassandra
+    environment:
+      CASSANDRA_KEYSPACE: vendor_keyspace
+      CASSANDRA_CLUSTER_NAME: "VendorCluster"
+      CASSANDRA_DC: dc1
+      CASSANDRA_RACK: rack1
+    ports:
+      - "9042:9042" # Default Cassandra port
+    volumes:
+      - cassandra_data:/var/lib/cassandra
+    restart: always
+
+
+volumes:
+  mysql_data:
+  cassandra_data:
