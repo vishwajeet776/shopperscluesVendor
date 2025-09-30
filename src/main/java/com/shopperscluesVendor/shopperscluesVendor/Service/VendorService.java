@@ -12,6 +12,7 @@ import org.springframework.stereotype.Service;
 import java.util.List;
 import java.util.UUID;
 
+
 @Service
 @RequiredArgsConstructor
 public class VendorService {
@@ -52,6 +53,7 @@ public class VendorService {
         List<ProductDTO> productDTOs = productlist.stream()
                 .map(p -> {
                     ProductDTO dto = new ProductDTO();
+                    dto.setId(p.getId());
                     dto.setName(p.getName());
                     dto.setPrice(p.getPrice());
                     dto.setCategory(p.getCategory());
@@ -66,5 +68,10 @@ public class VendorService {
 
 
 
+    }
+
+    public List<Vendor> getAll() {
+       List<Vendor> vendorList= vendorRepo.findAll();
+       return vendorList;
     }
 }
