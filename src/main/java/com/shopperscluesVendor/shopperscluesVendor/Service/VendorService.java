@@ -37,6 +37,7 @@ public class VendorService {
                     product.setCategory(dto.getCategory());
                     product.setPrice(dto.getPrice());
                     product.setVendorId(savedVendor.getId());
+                    product.setQuantity_big(dto.getQuantity_big());
                     return product;
                 }).toList();
 

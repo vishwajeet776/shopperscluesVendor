@@ -1,6 +1,7 @@
 package com.shopperscluesVendor.shopperscluesVendor.Service;
 
 import com.shopperscluesVendor.shopperscluesVendor.DTO.ProductDTO;
+import com.shopperscluesVendor.shopperscluesVendor.DTO.ProductOutDTO;
 import com.shopperscluesVendor.shopperscluesVendor.Entity.Product;
 import com.shopperscluesVendor.shopperscluesVendor.Repository.ProductRepository;
 import lombok.RequiredArgsConstructor;
@@ -13,19 +14,32 @@ import java.util.List;
 public class ProductService {
     private final ProductRepository productRepository;
 
-    public List<ProductDTO> get_all() {
+    public List<ProductOutDTO> get_all() {
         List<Product> productList= productRepository.findAll();
-        List<ProductDTO> productDTOList=productList.stream().
+        List<ProductOutDTO> productDTOList=productList.stream().
                 map(product -> {
-                    ProductDTO pDTO=new ProductDTO();
+                    ProductOutDTO pDTO=new ProductOutDTO();
                     pDTO.setId(product.getId());
                     pDTO.setName(product.getName());
                     pDTO.setCategory(product.getCategory());
                     pDTO.setPrice(product.getPrice());
-                    pDTO.setVendorId(product.getVendorId());
                     return pDTO;
                 }).toList();
         return productDTOList;
 
+    }
+
+    public List<ProductOutDTO> get_byCataegory(String category) {
+        List<Product> productList= productRepository.findByCategory(category);
+        List<ProductOutDTO> productDTOList=productList.stream().
+                map(product -> {
+                    ProductOutDTO pDTO=new ProductOutDTO();
+                    pDTO.setId(product.getId());
+                    pDTO.setName(product.getName());
+                    pDTO.setCategory(product.getCategory());
+                    pDTO.setPrice(product.getPrice());
+                    return pDTO;
+                }).toList();
+        return productDTOList;
     }
 }
