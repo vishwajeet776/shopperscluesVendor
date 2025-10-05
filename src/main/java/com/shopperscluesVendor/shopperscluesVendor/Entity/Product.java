@@ -1,5 +1,6 @@
 package com.shopperscluesVendor.shopperscluesVendor.Entity;
 
+import jakarta.persistence.Entity;
 import lombok.Data;
 import org.springframework.data.cassandra.core.mapping.Column;
 import org.springframework.data.cassandra.core.mapping.PrimaryKey;
@@ -12,7 +13,8 @@ import java.util.UUID;
 public class Product {
 
     @PrimaryKey
-    private UUID id;   // use UUID instead of Long
+    private UUID id;
+    @Column("vendorid")// use UUID instead of Long
     private long vendorId;
     private String name;
     private long price;

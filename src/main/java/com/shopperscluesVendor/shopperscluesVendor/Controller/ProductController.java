@@ -30,10 +30,11 @@ public class ProductController {
         return list.subList(0, count);
     }
 
-    @GetMapping("/{category}")
+    @GetMapping("/category/{category}")
     public List<ProductOutDTO> getByCategory(@PathVariable String category){
-       return productService.get_byCataegory(category);
+        return productService.getByCategory(category);
     }
+
 
 
 }

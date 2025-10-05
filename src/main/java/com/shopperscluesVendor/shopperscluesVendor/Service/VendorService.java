@@ -4,8 +4,9 @@ import com.shopperscluesVendor.shopperscluesVendor.DTO.ProductDTO;
 import com.shopperscluesVendor.shopperscluesVendor.DTO.VendorDTO;
 import com.shopperscluesVendor.shopperscluesVendor.Entity.Product;
 import com.shopperscluesVendor.shopperscluesVendor.Entity.Vendor;
-import com.shopperscluesVendor.shopperscluesVendor.Repository.ProductRepository;
-import com.shopperscluesVendor.shopperscluesVendor.Repository.VendorRepository;
+import com.shopperscluesVendor.shopperscluesVendor.Feing.InventoryClient;
+import com.shopperscluesVendor.shopperscluesVendor.Repository.cassandra.ProductRepository;
+import com.shopperscluesVendor.shopperscluesVendor.Repository.jpa.VendorRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -19,6 +20,7 @@ public class VendorService {
 
     private final VendorRepository vendorRepo;
     private final ProductRepository productRepository;
+    private final InventoryClient inventoryClient;
 
     public VendorDTO add_vendor(VendorDTO vendorDTO){
         Vendor vendor=new Vendor();
@@ -38,6 +40,13 @@ public class VendorService {
                     product.setPrice(dto.getPrice());
                     product.setVendorId(savedVendor.getId());
                     product.setQuantity_big(dto.getQuantity_big());
+
+                    inventoryClient.addInventory(
+                            product.getName(),
+                            product.getQuantity_big(),
+                            product.getVendorId()
+                    );
+
                     return product;
                 }).toList();
 
@@ -59,6 +68,7 @@ public class VendorService {
                     dto.setPrice(p.getPrice());
                     dto.setCategory(p.getCategory());
                     dto.setVendorId(p.getVendorId());
+                    dto.setQuantity_big(p.getQuantity_big());
                     return dto;
                 })
                 .toList();
