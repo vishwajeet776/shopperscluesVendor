@@ -15,5 +15,7 @@ public interface ProductRepository extends CassandraRepository<Product, UUID> {
 
    List<Product> findByCategory(String category);
 
+   List<Product> findByVendorId(long id);
+
 //   public List<Product> findAllByCategory(String Category);
 }

@@ -24,4 +24,23 @@ public class VendorController {
     public List<Vendor> getAll(){
         return vendorService.getAll();
     }
+
+    // READ one vendor
+    @GetMapping("/{id}")
+    public VendorDTO getVendorById(@PathVariable Long id) {
+        return vendorService.getVendorById(id);
+    }
+
+    // UPDATE vendor (partial update)
+    @PatchMapping("/{id}")
+    public VendorDTO updateVendor(@PathVariable Long id, @RequestBody VendorDTO vendorDTO) {
+        return vendorService.updateVendor(id, vendorDTO);
+    }
+
+    // DELETE vendor
+    @DeleteMapping("/{id}")
+    public String deleteVendor(@PathVariable Long id) {
+        vendorService.deleteVendor(id);
+        return "Vendor with ID " + id + " deleted successfully!";
+    }
 }
