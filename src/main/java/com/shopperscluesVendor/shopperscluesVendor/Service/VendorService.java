@@ -1,5 +1,6 @@
 package com.shopperscluesVendor.shopperscluesVendor.Service;
 
+import com.shopperscluesVendor.shopperscluesVendor.DTO.InventoryDTO;
 import com.shopperscluesVendor.shopperscluesVendor.DTO.ProductDTO;
 import com.shopperscluesVendor.shopperscluesVendor.DTO.VendorDTO;
 import com.shopperscluesVendor.shopperscluesVendor.Entity.Product;
@@ -8,6 +9,8 @@ import com.shopperscluesVendor.shopperscluesVendor.Feing.InventoryClient;
 import com.shopperscluesVendor.shopperscluesVendor.Repository.cassandra.ProductRepository;
 import com.shopperscluesVendor.shopperscluesVendor.Repository.jpa.VendorRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.log4j.Log4j2;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -15,20 +18,24 @@ import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
+@Log4j2
 public class VendorService {
 
     private final VendorRepository vendorRepo;
     private final ProductRepository productRepository;
     private final InventoryClient inventoryClient;
+    private final KafkaTemplate<String, InventoryDTO> inventoryTemplate;
 
-    // CREATE Vendor with products & add inventory
+
     public VendorDTO add_vendor(VendorDTO vendorDTO) {
+        log.info("Adding new vendor: {}", vendorDTO);
         Vendor vendor = new Vendor();
         vendor.setName(vendorDTO.getName());
         vendor.setCity(vendorDTO.getCity());
         vendor.setGstNumber(vendorDTO.getGstNumber());
 
         Vendor savedVendor = vendorRepo.save(vendor);
+        log.info("Vendor saved: {}", savedVendor);
 
         List<Product> productList = vendorDTO.getProductList().stream()
                 .map(dto -> {
@@ -40,32 +47,46 @@ public class VendorService {
                     product.setVendorId(savedVendor.getId());
                     product.setQuantity_big(dto.getQuantity_big());
 
-                    // Add to inventory
-                    inventoryClient.addInventory(product.getId().toString(),product.getName(), product.getQuantity_big(), product.getVendorId());
+                    // Build InventoryDTO
+                    InventoryDTO inventoryDTO = new InventoryDTO();
+                    inventoryDTO.setProductId(product.getId().toString());
+                    inventoryDTO.setName(product.getName());
+                    inventoryDTO.setQuantity(product.getQuantity_big());
+                    inventoryDTO.setVendorId(savedVendor.getId());
 
+                    // Send to Kafka
+                    log.info("Publishing inventory update to Kafka for product {}", product.getId());
+                    inventoryTemplate.send("inventory-topic", inventoryDTO);
+
+                    log.info("Adding product {} to inventory for vendor {}", product.getName(), savedVendor.getId());
+                    inventoryClient.addInventory(product.getId().toString(), product.getName(), product.getQuantity_big(), product.getVendorId());
                     return product;
                 }).toList();
 
         productRepository.saveAll(productList);
+        log.info("All products saved for vendor: {}", savedVendor.getId());
 
         return toDTO(savedVendor, productList);
     }
 
-    // GET all vendors
     public List<Vendor> getAll() {
-        return vendorRepo.findAll();
+        log.info("Fetching all vendors");
+        List<Vendor> vendors = vendorRepo.findAll();
+        log.info("Total vendors fetched: {}", vendors.size());
+        return vendors;
     }
 
-    // GET vendor by ID
     public VendorDTO getVendorById(Long id) {
+        log.info("Fetching vendor by ID: {}", id);
         Vendor vendor = vendorRepo.findById(id)
                 .orElseThrow(() -> new RuntimeException("Vendor not found with ID: " + id));
         List<Product> products = productRepository.findByVendorId(vendor.getId());
+        log.info("Vendor found: {} with {} products", vendor.getName(), products.size());
         return toDTO(vendor, products);
     }
 
-    // UPDATE vendor & products + sync inventory
     public VendorDTO updateVendor(Long id, VendorDTO dto) {
+        log.info("Updating vendor ID: {} with data: {}", id, dto);
         Vendor vendor = vendorRepo.findById(id)
                 .orElseThrow(() -> new RuntimeException("Vendor not found with ID: " + id));
 
@@ -74,11 +95,11 @@ public class VendorService {
         if (dto.getGstNumber() != null) vendor.setGstNumber(dto.getGstNumber());
 
         Vendor updatedVendor = vendorRepo.save(vendor);
+        log.info("Vendor updated: {}", updatedVendor);
 
         if (dto.getProductList() != null && !dto.getProductList().isEmpty()) {
             dto.getProductList().forEach(p -> {
                 if (p.getId() == null) {
-                    // New product
                     Product product = new Product();
                     product.setId(UUID.randomUUID());
                     product.setName(p.getName());
@@ -88,11 +109,10 @@ public class VendorService {
                     product.setQuantity_big(p.getQuantity_big());
 
                     productRepository.save(product);
+                    log.info("New product added: {} for vendor {}", product.getName(), updatedVendor.getId());
 
-                    // Add to inventory
-                    inventoryClient.addInventory(product.getId().toString(),product.getName(), product.getQuantity_big(), product.getVendorId());
+                    inventoryClient.addInventory(product.getId().toString(), product.getName(), product.getQuantity_big(), product.getVendorId());
                 } else {
-                    // Existing product, update quantity in inventory
                     Product existingProduct = productRepository.findById(p.getId())
                             .orElseThrow(() -> new RuntimeException("Product not found with ID: " + p.getId()));
                     existingProduct.setName(p.getName() != null ? p.getName() : existingProduct.getName());
@@ -101,33 +121,37 @@ public class VendorService {
                     existingProduct.setQuantity_big(p.getQuantity_big() != null ? p.getQuantity_big() : existingProduct.getQuantity_big());
 
                     productRepository.save(existingProduct);
+                    log.info("Existing product updated: {} for vendor {}", existingProduct.getName(), updatedVendor.getId());
 
-                    // Update inventory
                     inventoryClient.updateInventory(existingProduct.getId(), existingProduct.getQuantity_big());
                 }
             });
         }
 
         List<Product> updatedProducts = productRepository.findByVendorId(updatedVendor.getId());
+        log.info("Vendor update complete: {} with {} products", updatedVendor.getId(), updatedProducts.size());
         return toDTO(updatedVendor, updatedProducts);
     }
 
-    // DELETE vendor and its products
     public void deleteVendor(Long id) {
+        log.info("Deleting vendor with ID: {}", id);
         Vendor vendor = vendorRepo.findById(id)
                 .orElseThrow(() -> new RuntimeException("Vendor not found with ID: " + id));
 
         List<Product> vendorProducts = productRepository.findByVendorId(vendor.getId());
         if (!vendorProducts.isEmpty()) {
-            // Delete from inventory first
-            vendorProducts.forEach(p -> inventoryClient.deleteInventory(p.getId()));
+            vendorProducts.forEach(p -> {
+                log.info("Deleting inventory for product: {}", p.getId());
+                inventoryClient.deleteInventory(p.getId());
+            });
             productRepository.deleteAll(vendorProducts);
+            log.info("Deleted all products for vendor: {}", vendor.getId());
         }
 
         vendorRepo.delete(vendor);
+        log.info("Vendor deleted successfully: {}", id);
     }
 
-    // Helper method to convert entity → DTO
     private VendorDTO toDTO(Vendor vendor, List<Product> productList) {
         VendorDTO dto = new VendorDTO();
         dto.setId(vendor.getId());

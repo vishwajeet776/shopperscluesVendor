@@ -9,7 +9,7 @@ import java.util.UUID;
 @Data
 public class InventoryDTO {
     @Id
-    private UUID productId;   // Primary key in MongoDB
+    private String productId;
     private String name;
     private Long quantity;
     private Long vendorId;
