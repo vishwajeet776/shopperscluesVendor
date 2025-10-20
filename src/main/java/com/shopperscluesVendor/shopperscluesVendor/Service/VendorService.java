@@ -59,7 +59,7 @@ public class VendorService {
                     inventoryTemplate.send("inventory-topic", inventoryDTO);
 
                     log.info("Adding product {} to inventory for vendor {}", product.getName(), savedVendor.getId());
-                    inventoryClient.addInventory(product.getId().toString(), product.getName(), product.getQuantity_big(), product.getVendorId());
+//                    inventoryClient.addInventory(product.getId().toString(), product.getName(), product.getQuantity_big(), product.getVendorId());
                     return product;
                 }).toList();
 

@@ -8,7 +8,7 @@ import java.util.UUID;
 
 @Data
 public class InventoryDTO {
-    @Id
+
     private String productId;
     private String name;
     private Long quantity;
