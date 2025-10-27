@@ -114,6 +114,13 @@
 			<artifactId>spring-kafka</artifactId>
 		</dependency>
 
+<!--		Starter for using Java Mail and Spring Framework's email sending support&ndash;&gt;-->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-mail</artifactId>
+			<version>4.0.0-M2</version>
+		</dependency>
+
 	</dependencies>
 
 	<build>

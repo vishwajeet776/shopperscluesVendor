@@ -8,6 +8,7 @@ import java.util.List;
 public class VendorDTO {
     private long id;
     private String name;
+    private String mailId;
     private String gstNumber;
     private String city;
     private List<ProductDTO> productList;

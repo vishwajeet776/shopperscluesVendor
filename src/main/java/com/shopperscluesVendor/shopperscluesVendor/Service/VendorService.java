@@ -25,6 +25,7 @@ public class VendorService {
     private final ProductRepository productRepository;
     private final InventoryClient inventoryClient;
     private final KafkaTemplate<String, InventoryDTO> inventoryTemplate;
+    private final MailService mailService;
 
 
     public VendorDTO add_vendor(VendorDTO vendorDTO) {
@@ -33,6 +34,7 @@ public class VendorService {
         vendor.setName(vendorDTO.getName());
         vendor.setCity(vendorDTO.getCity());
         vendor.setGstNumber(vendorDTO.getGstNumber());
+        vendor.setMailId(vendorDTO.getMailId());
 
         Vendor savedVendor = vendorRepo.save(vendor);
         log.info("Vendor saved: {}", savedVendor);
@@ -56,8 +58,37 @@ public class VendorService {
 
                     // Send to Kafka
                     log.info("Publishing inventory update to Kafka for product {}", product.getId());
-                    inventoryTemplate.send("inventory-topic", inventoryDTO);
+                    inventoryTemplate.send("inventory-topic", inventoryDTO)
+                            .thenAccept(result -> {
+                                log.info("Kafka message sent successfully for product {}", inventoryDTO.getProductId());
 
+                                String subject = "Product Added Successfully";
+                                String body = String.format("""
+                Hello %s,
+
+                Your product '%s' has been successfully added to inventory.
+                Product ID: %s
+                Quantity: %d
+
+                Regards,
+                Vendor Management Team
+                """,
+                                        savedVendor.getName(),
+                                        product.getName(),
+                                        product.getId(),
+                                        product.getQuantity_big());
+
+                                try {
+                                    mailService.sendMail(savedVendor.getMailId(), subject, body);
+                                    log.info("Notification email sent to {}", savedVendor.getMailId());
+                                } catch (Exception e) {
+                                    log.error("Failed to send email to vendor {}", savedVendor.getMailId(), e);
+                                }
+                            })
+                            .exceptionally(ex -> {
+                                log.error("Failed to send Kafka message for product {}", inventoryDTO.getProductId(), ex);
+                                return null;
+                            });
                     log.info("Adding product {} to inventory for vendor {}", product.getName(), savedVendor.getId());
 //                    inventoryClient.addInventory(product.getId().toString(), product.getName(), product.getQuantity_big(), product.getVendorId());
                     return product;
